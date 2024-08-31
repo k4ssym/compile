@@ -24,7 +24,15 @@ const Function = sequelize.define('Function', {
         type: DataTypes.DATE,
         allowNull: false,
         defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
     }
+}, {
+    timestamps: true,  // Автоматически управляет полями createdAt и updatedAt
+    tableName: 'functions'
 });
 
 User.hasMany(Function, { foreignKey: 'userId' });
