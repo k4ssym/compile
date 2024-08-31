@@ -27,7 +27,7 @@ sequelize.sync({ force: false })
 
 // Инициализация приложения
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8801;
 
 // Настройки для использования API RapidAPI
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
@@ -47,6 +47,7 @@ app.use(session({
     saveUninitialized: false,
     cookie: { secure: false }  // Убедитесь, что secure: true при использовании HTTPS
 }));
+
 
 // Axios instance with increased timeout and other settings
 const axiosInstance = axios.create({
@@ -104,7 +105,12 @@ app.post('/save-function', async (req, res) => {
 });
 
 // Get saved functions for the logged-in user
+// Get saved functions for the logged-in user
 app.get('/get-saved-functions', async (req, res) => {
+    if (!req.session.userId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
     try {
         const functions = await Function.findAll({ 
             where: { userId: req.session.userId },
@@ -196,14 +202,14 @@ app.post('/register', async (req, res) => {
     }
 });
 
-// Login route
+// Login route// Login route
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
         const user = await User.findOne({ where: { email } });
         if (user && await bcrypt.compare(password, user.password)) {
-            req.session.userId = user.id;
+            req.session.userId = user.id;  // Сохраняем userId в сессии
             res.json({ success: true });
         } else {
             res.json({ success: false, message: 'Invalid email or password.' });
@@ -213,6 +219,7 @@ app.post('/login', async (req, res) => {
         res.json({ success: false, message: 'Login failed.' });
     }
 });
+
 
 // Profile route
 app.get('/profile', async (req, res) => {
@@ -367,6 +374,3 @@ app.get('/logout', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
