@@ -1,0 +1,122 @@
+@import url('https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/4.0.0/github-markdown.min.css');
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.form-control {
+    border-radius: 0;
+}
+
+.btn-primary {
+    border-radius: 0;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+.card-header {
+    background-color: #007bff;
+    color: #fff;
+    border-radius: 8px 8px 0 0;
+}
+
+.markdown-body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    line-height: 1.6;
+    padding: 10px;
+    background-color: #fff;
+    border-radius: 0 0 8px 8px;
+}
+
+.markdown-body pre {
+    background-color: #f6f8fa;
+    padding: 16px;
+    border-radius: 6px;
+    overflow: auto;
+    position: relative;
+}
+
+.markdown-body code {
+    background-color: #f6f8fa;
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+/* Colors for syntax highlighting */
+.markdown-body .hljs-keyword,
+.markdown-body .hljs-selector-tag,
+.markdown-body .hljs-literal,
+.markdown-body .hljs-section,
+.markdown-body .hljs-link {
+    color: #a626a4;
+}
+
+.markdown-body .hljs-function .hljs-keyword {
+    color: #222;
+}
+
+.markdown-body .hljs,
+.markdown-body .hljs-subst {
+    color: #586e75;
+}
+
+.markdown-body .hljs-title,
+.markdown-body .hljs-attr,
+.markdown-body .hljs-attribute,
+.markdown-body .hljs-symbol,
+.markdown-body .hljs-bullet,
+.markdown-body .hljs-addition {
+    color: #268bd2;
+}
+
+.markdown-body .hljs-string,
+.markdown-body .hljs-title.class_,
+.markdown-body .hljs-type,
+.markdown-body .hljs-built_in,
+.markdown-body .hljs-builtin-name,
+.markdown-body .hljs-selector-attr,
+.markdown-body .hljs-selector-pseudo,
+.markdown-body .hljs-template-tag,
+.markdown-body .hljs-template-variable,
+.markdown-body .hljs-comment,
+.markdown-body .hljs-quote,
+.markdown-body .hljs-deletion {
+    color: #2aa198;
+}
+
+.markdown-body .hljs-meta,
+.markdown-body .hljs-doctag,
+.markdown-body .hljs-keyword,
+.markdown-body .hljs-formula {
+    color: #859900;
+}
+
+/* Copy button style */
+.copy-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+}
