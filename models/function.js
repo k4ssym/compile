@@ -7,7 +7,7 @@ const Function = sequelize.define('Function', {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    code: {
+    code: { 
         type: DataTypes.TEXT,
         allowNull: false,
     },
