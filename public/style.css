@@ -216,54 +216,88 @@ body {
     font-size: 16px;
     line-height: 1.6;
     font-family: 'Consolas', 'Courier New', Courier, monospace;
-    background-color: #f5f5f5;
-    color: #333;
+    background-color: #282c34; /* Темный фон */
+    color: #abb2bf; /* Основной текст */
     border-radius: 10px;
     padding: 5px;
 }
 
+/* Цвета для номера строк */
 .CodeMirror-gutters {
-    background: #fff;
-    border-right: 1px solid #ddd;
-    border-radius: 10px 0 0 10px;
+    background: #21252b;
+    color: #5c6370;
+    border-right: 1px solid #3b4048;
 }
 
-/* Highlight active line */
+/* Цвета для активной строки */
 .CodeMirror-activeline-background {
-    background: #e8f2ff;
+    background: rgba(72, 80, 90, 0.3);
 }
 
-/* Matching brackets */
+/* Цвета для соответствующих скобок */
 .CodeMirror-matchingbracket {
-    border-bottom: 2px solid #0070c1;
-    color: inherit;
+    border-bottom: 2px solid #61afef;
+    color: #00b51b;
 }
 
-/* Cursor */
+/* Цвета для курсора */
 .CodeMirror-cursor {
-    border-left: 1px solid #333;
+    border-left: 1px solid #abb2bf;
 }
 
-/* Background color for line numbers */
-.CodeMirror-gutters {
-    background: #f5f5f5;
-    border-right: 1px solid #ddd;
-}
-
-/* Line numbers */
-.CodeMirror-linenumber {
-    color: #999;
-}
-
-/* Styling for the selected text */
+/* Цвета выделенного текста */
 .CodeMirror-selected {
-    background: #d7d4f0;
+    background: rgba(46, 4, 131, 0.3); /* Желтый фон */
 }
 
-/* Matching tag highlight */
-.CodeMirror-matchingtag {
-    background: rgba(255, 235, 59, 0.3);
+/* Цвета для тегов */
+.cm-tag {
+    color: #e06c75; /* Красноватый оттенок */
 }
+
+/* Цвета для атрибутов */
+.cm-attribute {
+    color: #005133; /* Оранжевый */
+}
+
+/* Цвета для ключевых слов */
+.cm-keyword {
+    color: #c678dd; /* Фиолетовый */
+    font-weight: bold;
+}
+
+/* Цвета для строк */
+.cm-string {
+    color: #000000; /* Зеленый */
+}
+
+/* Цвета для комментариев */
+.cm-comment {
+    color: #5c6370; /* Серый */
+    font-style: italic;
+}
+
+/* Цвета для чисел */
+.cm-number {
+    color: #000000; /* Оранжевый */
+}
+
+/* Цвета для переменных */
+.cm-variable {
+    color: #000000;
+}
+
+/* Цвета для встроенных функций */
+.cm-builtin {
+    color: #56b6c2; /* Голубой */
+}
+
+/* Цвета для ошибок */
+.cm-error {
+    color: #e06c75; /* Красный */
+    background: rgba(224, 36, 36, 0.1);
+}
+
 
 /* Profile info styling */
 .profile-info-container {
