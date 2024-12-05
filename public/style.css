@@ -331,7 +331,7 @@ body {
     text-decoration: underline;
 }
 
-/* Loading overlay */
+/* Loading overlay */ 
 .loading-overlay {
     position: fixed;
     top: 0;
