@@ -262,19 +262,25 @@ app.post('/run-code', async (req, res) => {
         const messages = [
             {
                 role: "user",
-                content: `1. Ignore all single line comments, sentences, and notes, which start from #
-                          2. But, if there is any mistakes, excluding the presence of comments, show me my mistake and the line order of the error in 10 words. I DO NOT NEED ANY CORRECTED CODE: SPEAK IN RUSSIAN \n\n${code}\n\n`
+                content: `
+1. Игнорируй все однострочные комментарии и заметки, начинающиеся с #. Анализируй только код.
+2. Если код не содержит ошибок, выведи только результат его выполнения, как это делает обычный компилятор, без любых дополнительных сообщений. БЛЯТЬ, просто результат правильного кода. МНЕ НЕ НАДО ГОВОРИТЬ ЧТО КОД ПРАИВЛЬНЫЙ И НЕ СОДЕРЖИТ ОШИБОК: ПРОСТО ДАЙ ОУТПУТ, РЕЗУЛЬТАТ кода сука.
+3. Если в коде есть ошибки (кроме комментариев), укажи их в следующем формате: "Линия #: описание ошибки" на русском языке.
+4. Если в коде есть запрос на ввод данных, предоставь случайное значение для выполнения кода.
+5. Подсчет строк начинай с первой строки предоставленного кода. Каждая новая строка увеличивает номер.
+Вот код для анализа:
+\n\n${code}\n\n`
             }
         ];
 
         const [user, apiResponse] = await Promise.all([
             userPromise,
             performApiRequestWithRetries(() => axiosInstance.post('/', {
-                model: "gpt-4o",
+                model: "gpt-4-turbo-preview",
                 messages: messages,
                 temperature: 0.1,
                 max_tokens: 150,
-                top_p: 0.2
+                top_p: 0.1
             }))
         ]);
 
@@ -319,9 +325,9 @@ app.post('/correct-code', async (req, res) => {
         const [user, apiResponse] = await Promise.all([
             userPromise,
             performApiRequestWithRetries(() => axiosInstance.post('/', {
-                model: "gpt-4o",
+                model: "gpt-4-turbo-preview",
                 messages: messages,
-                temperature: 0.2,
+                temperature: 0.1,
                 max_tokens: 500,
                 top_p: 0.5
             }))
