@@ -262,9 +262,10 @@ app.post('/run-code', async (req, res) => {
         const messages = [
             {
                 role: "user",
-                content: `1. Ignore all single line comments, sentences, and notes, which start from #. Watch the code, and ONLY if the code is correct and contains no errors, give me the output as an ordinary compiler. Even though if the code asks anything, any random number, you will work as an usual compiler when providing output for the correct code. IGNORE SINGLE LINE COMMENTS! If the code is correct, do not write anything in order to inform that the code is correct. Just leave it and give only the output, as you are the working and ordinary compiler. Будь обычным компилятором как code interpreter, который работает только на основе того что код делает, не добавляй от себя ничего. Просто дай output, результат всего кода. 
-                          2. But, if there is any mistake, excluding the presence of comments, show me my mistake and the line order of the error in 20 words. I DO NOT NEED ANY CORRECTED CODE: По мере того, как найдешь ошибки, делай так каждый раз: "Линия #: описывай ошибку коротко и понятно". Измени свой язык на Русский язык. Вот код мой: 
-                          Вот тут начинается линия первая моего кода: также считай линии кода дальше для находки ошибок\n\n${code}\n\n"`
+                content: `1. Игнорируй все однострочные комментарии, предложения и заметки, начинающиеся с #. Анализируй только код. Если код корректен и не содержит ошибок, выдай только результат выполнения кода, как это делает обычный компилятор. Если в коде есть запрос на ввод данных, предоставь случайное значение для выполнения кода. НЕ ПИШИ НИЧЕГО О ТОМ, ЧТО КОД КОРРЕКТЕН. Просто выдавай результат работы кода.
+2. Если в коде есть ошибки (кроме наличия комментариев), укажи их, следуя этому формату: "Линия #: описание ошибки коротко и понятно". Не исправляй ошибки, просто указывай их. Используй Русский язык для сообщений об ошибках.
+3. Подсчет строк начинай с первой строки предоставленного кода. Учитывай, что каждая новая строка увеличивает номер. Вот код для анализа:
+\n\n${code}\n\n"`
             }
         ];
 
