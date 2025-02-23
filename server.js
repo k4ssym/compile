@@ -1,35 +1,35 @@
 import express from 'express';
-import bodyParser from 'body-parser';
 import axios from 'axios';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcrypt';
 import session from 'express-session';
 import dotenv from 'dotenv';
+import http from 'http';
+import https from 'https';
+import compression from 'compression';
 
-// Import models and database
+// Импорт моделей и базы данных
 import User from './models/user.js';
 import sequelize from './models/index.js';
 import Function from './models/function.js';
 
-// Configure environment variables
 dotenv.config();
 
-// Sync database
+// Синхронизация базы данных
 sequelize.sync({ force: false })
   .then(() => {
     console.log('Tables have been created.');
   })
   .catch(err => {
     console.error('Unable to create tables, error:', err);
-    process.exit(1);  // Exit the process in case of an error
+    process.exit(1);
   });
 
-// Initialize the app
 const app = express();
 const PORT = process.env.PORT || 8888;
 
-// RapidAPI settings
+// RapidAPI настройки
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST;
 const RAPIDAPI_URL = `https://chat-gpt-4-turbo1.p.rapidapi.com/`;
@@ -37,45 +37,88 @@ const RAPIDAPI_URL = `https://chat-gpt-4-turbo1.p.rapidapi.com/`;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Middleware
+app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
+app.use(express.static('public', { maxAge: '1d' })); // статика кэшируется на 1 день
 
+// Отключаем заголовок X-Powered-By для безопасности
+app.disable('x-powered-by');
+
+// Конфигурация сессии
 app.use(session({
     secret: 'your_secret_key',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false }  // Ensure secure: true when using HTTPS
+    cookie: { secure: false }  // для HTTPS выставить secure: true
 }));
 
-// Axios instance with increased timeout and other settings
+// Агенты с увеличенным числом одновременных соединений
+const httpAgent = new http.Agent({ keepAlive: true, maxSockets: Infinity });
+const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: Infinity });
+
+// Axios instance с оптимизированными настройками
 const axiosInstance = axios.create({
     baseURL: RAPIDAPI_URL,
-    timeout: 60000,  // Timeout set to 60 seconds
+    timeout: 15000,  // 15 секунд
     headers: {
         'Content-Type': 'application/json',
         'x-rapidapi-host': RAPIDAPI_HOST,
-        'x-rapidapi-key': RAPIDAPI_KEY
-    }
+        'x-rapidapi-key': RAPIDAPI_KEY,
+        'Connection': 'keep-alive'
+    },
+    httpAgent,
+    httpsAgent
 });
 
-// Function to perform API requests with retries
-async function performApiRequestWithRetries(apiRequest, retries = 3, delay = 2000) {
+// Функция с экспоненциальным backoff для запросов к AI API
+async function performApiRequestWithRetries(apiRequest, retries = 3, delay = 500) {
     for (let i = 0; i < retries; i++) {
         try {
             const response = await apiRequest();
-            return response;  // Successful request, return the result
+            return response;
         } catch (error) {
             if (i === retries - 1) {
-                throw error;  // If this is the last attempt, throw the error
+                throw error;
             }
             console.error(`Attempt ${i + 1} failed. Retrying in ${delay} ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));  // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 2;
         }
     }
 }
 
-// Save a new function
+// Вспомогательная функция для вызова AI API и вычитания icoins
+async function callAiApiAndDeductIcoins(req, messages, cost, configOverrides) {
+    // Параллельно получаем данные пользователя и делаем запрос к AI API
+    const [user, apiResponse] = await Promise.all([
+        User.findByPk(req.session.userId),
+        performApiRequestWithRetries(() => axiosInstance.post('/', {
+            model: "gpt-4-turbo-preview",
+            messages,
+            ...configOverrides
+        }))
+    ]);
+
+    if (!user) {
+        throw { status: 401, message: 'Unauthorized' };
+    }
+
+    if (user.icoins < cost) {
+        throw { status: 400, message: 'Not enough iCoins.' };
+    }
+
+    user.icoins -= cost;
+    await user.save();
+
+    return { user, apiResponse };
+}
+
+// ------------------------------
+// Маршруты для работы с функциями
+// ------------------------------
+
 app.post('/save-function', async (req, res) => {
     const { title, code } = req.body;
 
@@ -96,7 +139,6 @@ app.post('/save-function', async (req, res) => {
     }
 });
 
-// Get saved functions for the logged-in user
 app.get('/get-saved-functions', async (req, res) => {
     if (!req.session.userId) {
         return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -105,7 +147,7 @@ app.get('/get-saved-functions', async (req, res) => {
     try {
         const functions = await Function.findAll({ 
             where: { userId: req.session.userId },
-            order: [['createdAt', 'ASC']] // Order by creation date
+            order: [['createdAt', 'ASC']]
         });
         res.json(functions);
     } catch (error) {
@@ -114,7 +156,6 @@ app.get('/get-saved-functions', async (req, res) => {
     }
 });
 
-// Update function title
 app.post('/update-function-title', async (req, res) => {
     const { id, title } = req.body;
 
@@ -134,7 +175,6 @@ app.post('/update-function-title', async (req, res) => {
     }
 });
 
-// Delete a function
 app.delete('/delete-function/:id', async (req, res) => {
     const { id } = req.params;
 
@@ -152,7 +192,6 @@ app.delete('/delete-function/:id', async (req, res) => {
     }
 });
 
-// Load a specific function
 app.get('/load-function/:id', async (req, res) => {
     const { id } = req.params;
 
@@ -169,7 +208,85 @@ app.get('/load-function/:id', async (req, res) => {
     }
 });
 
-// Home route
+// ------------------------------
+// Маршруты для AI API (оптимизированные)
+// ------------------------------
+
+app.post('/run-code', async (req, res) => {
+    const { code } = req.body;
+
+    const messages = [
+        {
+            role: "user",
+            content: `
+1. Игнорируй все однострочные комментарии и заметки, начинающиеся с #. Анализируй только код.
+2. Если код не содержит ошибок, выведи только результат его выполнения, как это делает обычный компилятор, без дополнительных сообщений.
+3. Если в коде есть ошибки (кроме комментариев), укажи их в следующем формате: "Линия #: описание ошибки" на русском языке.
+4. Если в коде есть запрос на ввод данных, предоставь случайное значение для выполнения кода.
+5. Подсчет строк начинай с первой строки предоставленного кода. Каждая новая строка увеличивает номер.
+Вот код для анализа:
+\n\n${code}\n\n`
+        }
+    ];
+
+    try {
+        // Стоимость выполнения: 5 iCoins; настройки для AI API: max_tokens: 150, temperature: 0.1, top_p: 0.1
+        const { apiResponse } = await callAiApiAndDeductIcoins(req, messages, 5, {
+            temperature: 0.1,
+            max_tokens: 150,
+            top_p: 0.1
+        });
+
+        let aiResponse = apiResponse.data.choices?.[0]?.message?.content?.trim();
+        if (!aiResponse) {
+            aiResponse = "No output provided by the AI";
+        }
+
+        res.json({ success: true, output: aiResponse });
+    } catch (error) {
+        console.error('Run Code Error:', error.response ? error.response.data : error.message);
+        res.status(error.status || 500).json({ success: false, message: 'An error occurred while processing your request.' });
+    }
+});
+
+app.post('/correct-code', async (req, res) => {
+    const { code } = req.body;
+
+    const messages = [
+        {
+            role: "user",
+            content: `Send me only the corrected code without the type of language (python, js, or so on) and just put these signs # in the lines you made changes. Only code with single line comments where you did change in very succinct and short possible way. I do not need your words. SPEAK IN RUSSIAN. : \n\n${code}\n\n`
+        }
+    ];
+
+    try {
+        // Стоимость выполнения: 30 iCoins; настройки для AI API: max_tokens: 500, temperature: 0.1, top_p: 0.5
+        const { apiResponse } = await callAiApiAndDeductIcoins(req, messages, 30, {
+            temperature: 0.1,
+            max_tokens: 500,
+            top_p: 0.5
+        });
+
+        let correctedCode = apiResponse.data.choices?.[0]?.message?.content?.trim();
+        if (correctedCode) {
+            const codeBlockMatch = correctedCode.match(/```([\s\S]+?)```/);
+            if (codeBlockMatch) {
+                correctedCode = codeBlockMatch[1].trim();
+            }
+            return res.json({ success: true, correctedCode });
+        } else {
+            throw new Error("AI response did not contain corrected code.");
+        }
+    } catch (error) {
+        console.error('Correct Code Error:', error.response ? error.response.data : error.message);
+        res.status(error.status || 500).json({ success: false, message: 'An error occurred while processing your request.' });
+    }
+});
+
+// ------------------------------
+// Маршруты для домашней страницы и авторизации (без изменений)
+// ------------------------------
+
 app.get('/', (req, res) => {
     if (req.session.userId) {
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -178,7 +295,6 @@ app.get('/', (req, res) => {
     }
 });
 
-// Registration route
 app.post('/register', async (req, res) => {
     const { name, email, password } = req.body;
 
@@ -193,14 +309,13 @@ app.post('/register', async (req, res) => {
     }
 });
 
-// Login route
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
         const user = await User.findOne({ where: { email } });
         if (user && await bcrypt.compare(password, user.password)) {
-            req.session.userId = user.id;  // Store userId in session
+            req.session.userId = user.id;
             res.json({ success: true });
         } else {
             res.json({ success: false, message: 'Invalid email or password.' });
@@ -211,7 +326,6 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// Profile route
 app.get('/profile', async (req, res) => {
     if (!req.session.userId) {
         return res.status(401).json({ message: 'Unauthorized' });
@@ -226,7 +340,6 @@ app.get('/profile', async (req, res) => {
     }
 });
 
-// Update profile route
 app.post('/update-profile', async (req, res) => {
     if (!req.session.userId) {
         return res.status(401).json({ message: 'Unauthorized' });
@@ -253,122 +366,14 @@ app.post('/update-profile', async (req, res) => {
     }
 });
 
-// Run code route
-app.post('/run-code', async (req, res) => {
-    const { code } = req.body;  // Removed input from request
-
-    try {
-        const userPromise = User.findByPk(req.session.userId);
-        const messages = [
-            {
-                role: "user",
-                content: `
-1. Игнорируй все однострочные комментарии и заметки, начинающиеся с #. Анализируй только код.
-2. Если код не содержит ошибок, выведи только результат его выполнения, как это делает обычный компилятор, без любых дополнительных сообщений. БЛЯТЬ, просто результат правильного кода. МНЕ НЕ НАДО ГОВОРИТЬ ЧТО КОД ПРАИВЛЬНЫЙ И НЕ СОДЕРЖИТ ОШИБОК: ПРОСТО ДАЙ ОУТПУТ, РЕЗУЛЬТАТ кода сука.
-3. Если в коде есть ошибки (кроме комментариев), укажи их в следующем формате: "Линия #: описание ошибки" на русском языке.
-4. Если в коде есть запрос на ввод данных, предоставь случайное значение для выполнения кода.
-5. Подсчет строк начинай с первой строки предоставленного кода. Каждая новая строка увеличивает номер.
-Вот код для анализа:
-\n\n${code}\n\n`
-            }
-        ];
-
-        const [user, apiResponse] = await Promise.all([
-            userPromise,
-            performApiRequestWithRetries(() => axiosInstance.post('/', {
-                model: "gpt-4-turbo-preview",
-                messages: messages,
-                temperature: 0.1,
-                max_tokens: 150,
-                top_p: 0.1
-            }))
-        ]);
-
-        if (!user) {
-            return res.status(401).json({ success: false, message: 'Unauthorized' });
-        }
-
-        if (user.icoins < 5) {
-            return res.status(400).json({ success: false, message: 'Not enough iCoins.' });
-        }
-
-        user.icoins -= 5;
-        await user.save();
-
-        let aiResponse = apiResponse.data.choices?.[0]?.message?.content?.trim();
-
-        if (!aiResponse) {
-            aiResponse = "No output provided by the AI";  // Fallback in case of unexpected response structure
-        }
-
-        res.json({ success: true, output: aiResponse, icoins: user.icoins });
-
-    } catch (error) {
-        console.error('Run Code Error:', error.response ? error.response.data : error.message);
-        res.status(500).json({ success: false, message: 'An error occurred while processing your request.' });
-    }
-});
-
-// Correct code route
-app.post('/correct-code', async (req, res) => {
-    const { code } = req.body;
-
-    try {
-        const userPromise = User.findByPk(req.session.userId);  // Async user query
-        const messages = [
-            {
-                role: "user",
-                content: `Send me only the corrected code without the type of language (python, js, or so on) and just put these signs # in the lines you made changes. Only code with single line comments where you did change in very succinct and short possible way. I do not need your words. SPEAK IN RUSSIAN. : \n\n${code}\n\n`
-            }
-        ];
-
-        const [user, apiResponse] = await Promise.all([
-            userPromise,
-            performApiRequestWithRetries(() => axiosInstance.post('/', {
-                model: "gpt-4-turbo-preview",
-                messages: messages,
-                temperature: 0.1,
-                max_tokens: 500,
-                top_p: 0.5
-            }))
-        ]);
-
-        if (!user) {
-            return res.status(401).json({ success: false, message: 'Unauthorized' });
-        }
-
-        if (user.icoins < 30) {
-            return res.status(400).json({ success: false, message: 'Not enough iCoins.' });
-        }
-
-        user.icoins -= 30;
-        await user.save();
-
-        let correctedCode = apiResponse.data.choices?.[0]?.message?.content?.trim();
-
-        if (correctedCode) {
-            const codeBlockMatch = correctedCode.match(/```([\s\S]+?)```/);
-            if (codeBlockMatch) {
-                correctedCode = codeBlockMatch[1].trim();
-            }
-
-            res.json({ success: true, correctedCode, icoins: user.icoins });
-        } else {
-            throw new Error("AI response did not contain corrected code.");
-        }
-    } catch (error) {
-        console.error('Correct Code Error:', error.response ? error.response.data : error.message);
-        res.status(500).json({ success: false, message: 'An error occurred while processing your request.' });
-    }
-});
-
-// Logout route
 app.get('/logout', (req, res) => {
     req.session.destroy();
     res.json({ success: true });
 });
 
-// Start server
+// ------------------------------
+// Запуск сервера
+// ------------------------------
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
