@@ -1,4 +1,3 @@
-// models/function.js
 import { DataTypes } from 'sequelize';
 import sequelize from './index.js';
 import User from './user.js';
@@ -35,6 +34,7 @@ const Function = sequelize.define('Function', {
     tableName: 'functions'
 });
 
+// Установка связей между моделями
 User.hasMany(Function, { foreignKey: 'userId' });
 Function.belongsTo(User, { foreignKey: 'userId' });
 
