@@ -5,19 +5,34 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcrypt';
 import session from 'express-session';
+import dotenv from 'dotenv';
+
+// Импорт моделей и базы данных
 import User from './models/user.js';
 import sequelize from './models/index.js';
 import Function from './models/function.js';
-import dotenv from 'dotenv';
+
+// Настройка переменных окружения
 dotenv.config();
 
-const app = express();  // Initialize app here
+// Синхронизация базы данных
+sequelize.sync({ force: false })
+  .then(() => {
+    console.log('Tables have been created.');
+  })
+  .catch(err => {
+    console.error('Unable to create tables, error:', err);
+    process.exit(1);  // Завершить процесс в случае ошибки
+  });
+
+// Инициализация приложения
+const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Настройки для использования API RapidAPI
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST;
 const RAPIDAPI_URL = `https://${RAPIDAPI_HOST}/chat/completions`;
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,19 +44,14 @@ app.use(express.static('public'));
 app.use(session({
     secret: 'your_secret_key',
     resave: false,
-    saveUninitialized: false,  // Changed to false to avoid creating sessions for unauthenticated users
-    cookie: { secure: false }  // Ensure secure: true if using HTTPS
+    saveUninitialized: false,
+    cookie: { secure: false }  // Убедитесь, что secure: true при использовании HTTPS
 }));
-
-sequelize.sync().catch(err => {
-    console.error('Database sync error:', err);
-    process.exit(1);
-});
 
 // Axios instance with increased timeout and other settings
 const axiosInstance = axios.create({
     baseURL: RAPIDAPI_URL,
-    timeout: 60000,  // Timeout set to 60 seconds
+    timeout: 60000,  // Таймаут установлен на 60 секунд
     headers: {
         'Content-Type': 'application/json',
         'x-rapidapi-host': RAPIDAPI_HOST,
@@ -54,16 +64,23 @@ async function performApiRequestWithRetries(apiRequest, retries = 3, delay = 200
     for (let i = 0; i < retries; i++) {
         try {
             const response = await apiRequest();
-            return response;  // Successful request, return result
+            return response;  // Успешный запрос, вернуть результат
         } catch (error) {
             if (i === retries - 1) {
-                throw error;  // If it's the last attempt, throw the error
+                throw error;  // Если это последняя попытка, выбросить ошибку
             }
             console.error(`Attempt ${i + 1} failed. Retrying in ${delay} ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));  // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, delay));  // Ожидание перед повторной попыткой
         }
     }
 }
+
+// Ваши маршруты и остальная логика здесь...
+
+// Запуск сервера
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
 
 // Save a new function
 app.post('/save-function', async (req, res) => {
