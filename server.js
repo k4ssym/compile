@@ -7,32 +7,32 @@ import bcrypt from 'bcrypt';
 import session from 'express-session';
 import dotenv from 'dotenv';
 
-// Импорт моделей и базы данных
+// Import models and database
 import User from './models/user.js';
 import sequelize from './models/index.js';
 import Function from './models/function.js';
 
-// Настройка переменных окружения
+// Configure environment variables
 dotenv.config();
 
-// Синхронизация базы данных
+// Sync database
 sequelize.sync({ force: false })
   .then(() => {
     console.log('Tables have been created.');
   })
   .catch(err => {
     console.error('Unable to create tables, error:', err);
-    process.exit(1);  // Завершить процесс в случае ошибки
+    process.exit(1);  // Exit the process in case of an error
   });
 
-// Инициализация приложения
+// Initialize the app
 const app = express();
-const PORT = process.env.PORT || 8801;
+const PORT = process.env.PORT || 8888;
 
-// Настройки для использования API RapidAPI
+// RapidAPI settings
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST;
-const RAPIDAPI_URL = `https://${RAPIDAPI_HOST}/chat/completions`;
+const RAPIDAPI_URL = `https://chat-gpt-4-turbo1.p.rapidapi.com/`;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,14 +45,13 @@ app.use(session({
     secret: 'your_secret_key',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false }  // Убедитесь, что secure: true при использовании HTTPS
+    cookie: { secure: false }  // Ensure secure: true when using HTTPS
 }));
-
 
 // Axios instance with increased timeout and other settings
 const axiosInstance = axios.create({
     baseURL: RAPIDAPI_URL,
-    timeout: 60000,  // Таймаут установлен на 60 секунд
+    timeout: 60000,  // Timeout set to 60 seconds
     headers: {
         'Content-Type': 'application/json',
         'x-rapidapi-host': RAPIDAPI_HOST,
@@ -65,23 +64,16 @@ async function performApiRequestWithRetries(apiRequest, retries = 3, delay = 200
     for (let i = 0; i < retries; i++) {
         try {
             const response = await apiRequest();
-            return response;  // Успешный запрос, вернуть результат
+            return response;  // Successful request, return the result
         } catch (error) {
             if (i === retries - 1) {
-                throw error;  // Если это последняя попытка, выбросить ошибку
+                throw error;  // If this is the last attempt, throw the error
             }
             console.error(`Attempt ${i + 1} failed. Retrying in ${delay} ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));  // Ожидание перед повторной попыткой
+            await new Promise(resolve => setTimeout(resolve, delay));  // Wait before retrying
         }
     }
 }
-
-// Ваши маршруты и остальная логика здесь...
-
-// Запуск сервера
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
 
 // Save a new function
 app.post('/save-function', async (req, res) => {
@@ -104,7 +96,6 @@ app.post('/save-function', async (req, res) => {
     }
 });
 
-// Get saved functions for the logged-in user
 // Get saved functions for the logged-in user
 app.get('/get-saved-functions', async (req, res) => {
     if (!req.session.userId) {
@@ -202,14 +193,14 @@ app.post('/register', async (req, res) => {
     }
 });
 
-// Login route// Login route
+// Login route
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
         const user = await User.findOne({ where: { email } });
         if (user && await bcrypt.compare(password, user.password)) {
-            req.session.userId = user.id;  // Сохраняем userId в сессии
+            req.session.userId = user.id;  // Store userId in session
             res.json({ success: true });
         } else {
             res.json({ success: false, message: 'Invalid email or password.' });
@@ -219,7 +210,6 @@ app.post('/login', async (req, res) => {
         res.json({ success: false, message: 'Login failed.' });
     }
 });
-
 
 // Profile route
 app.get('/profile', async (req, res) => {
@@ -273,8 +263,7 @@ app.post('/run-code', async (req, res) => {
             {
                 role: "user",
                 content: `1. Ignore all single line comments, sentences, and notes, which start from #
-                          2. What is the output of the code (JUST AN OUTPUT OF THE CODE) , not considering the signle line comments, setnences. JUST IGNORE THEM! Your answer is only output, no other message so I will not get confused
-                          3. But, if there is any mistakes, excluding the presense of comments, show me my mistake and the line order of the error in just one sentence. I DO NOT NEED ANY CORRECTED CODE: \n\n${code}\n\n`
+                          2. But, if there is any mistakes, excluding the presence of comments, show me my mistake and the line order of the error in 10 words. I DO NOT NEED ANY CORRECTED CODE: SPEAK IN RUSSIAN \n\n${code}\n\n`
             }
         ];
 
@@ -283,9 +272,9 @@ app.post('/run-code', async (req, res) => {
             performApiRequestWithRetries(() => axiosInstance.post('/', {
                 model: "gpt-4o",
                 messages: messages,
-                temperature: 0.2,
-                max_tokens: 50,
-                top_p: 0.5
+                temperature: 0.1,
+                max_tokens: 150,
+                top_p: 0.2
             }))
         ]);
 
@@ -323,7 +312,7 @@ app.post('/correct-code', async (req, res) => {
         const messages = [
             {
                 role: "user",
-                content: `Send me only the corrected code without the type of language (python, js, or so on) and just put these signs # in the lines you made changes. Only code with single line comments where you did change in very succinct and short possible way. I do not need your words.: \n\n${code}\n\n`
+                content: `Send me only the corrected code without the type of language (python, js, or so on) and just put these signs # in the lines you made changes. Only code with single line comments where you did change in very succinct and short possible way. I do not need your words. SPEAK IN RUSSIAN. : \n\n${code}\n\n`
             }
         ];
 
@@ -374,3 +363,6 @@ app.get('/logout', (req, res) => {
 });
 
 // Start server
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});

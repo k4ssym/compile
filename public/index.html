@@ -33,13 +33,20 @@
             <input type="text" class="title-input" id="code-title" placeholder="Enter Title Here">
         </div>
         <div class="buttons-container">
-            <div id="coin-balance" class="coin-info">
+            <div id="coin-balance" class="coin-info" onclick="goToiCoinsPage()">
                 <i class="fa fa-coins"></i> <span id="balance">100</span> iCoins
             </div>
             <button class="run-button" onclick="runCode()"><i class="fa fa-play"></i>Run (5 <i class="fa fa-coins"></i>)</button>
             <button class="correct-button" onclick="correctCode()"><i class="fa fa-check"></i>Correct (30 <i class="fa fa-coins"></i>)</button>
             <button class="save-button" onclick="saveCode()"><i class="fa fa-save"></i>Save</button>
         </div>
+        
+        <script>
+            function goToiCoinsPage() {
+                window.location.href = 'icoins.html';
+            }
+        </script>
+        
     </div>
 
     <div class="profile-info-container">
@@ -60,7 +67,11 @@
     <div class="loading-overlay" id="loading-overlay">
         <div class="loader"></div>
     </div>
-
+    <div class="notification-banner" id="notificationBanner">
+        <p>Ввод данных невозможен напрямую. Пожалуйста, обозначьте данные в коде.</p>
+        <button class="close-banner" onclick="closeBanner()">✖</button>
+    </div>
+    
     <!-- Login Prompt Modal -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
@@ -157,6 +168,13 @@
             } catch (error) {
                 console.error('Failed to delete function:', error);
             }
+        }
+        function closeBanner() {
+            const banner = document.getElementById("notificationBanner");
+            banner.style.transition = "top 0.3s ease, opacity 0.3s ease";
+            banner.style.top = "-100px";
+            banner.style.opacity = "0";
+            setTimeout(() => banner.style.display = "none", 300);
         }
 
         async function loadFunction(id) {
@@ -343,6 +361,7 @@
             }
         }
     </script>
+    
 </body>
 
 </html>

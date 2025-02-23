@@ -25,6 +25,53 @@ body {
     border-radius: 0 0 10px 10px;
 }
 
+/* Notification Banner */
+.notification-banner {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #ff5722; /* Оранжевый цвет для привлечения внимания */
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    font-size: 16px;
+    font-family: 'Roboto', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    animation: slideDown 0.5s ease forwards;
+    z-index: 1000;
+}
+
+/* Close Button */
+.close-banner {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.close-banner:hover {
+    color: #f0f0f0;
+}
+
+/* Slide Down Animation */
+@keyframes slideDown {
+    from {
+        top: -100px;
+        opacity: 0;
+    }
+    to {
+        top: 20px;
+        opacity: 1;
+    }
+}
+
+
 .title-container {
     display: flex;
     align-items: center;
