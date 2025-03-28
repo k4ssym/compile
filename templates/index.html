@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Function Info</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/4.0.0/github-markdown.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/styles/github.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Python Built-in Function Information</h1>
+        <form method="POST" class="mb-5">
+            <div class="input-group">
+                <input type="text" name="function_name" class="form-control" placeholder="Enter function name" required>
+                <div class="input-group-append">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </div>
+        </form>
+        {% if function_info %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2>Function Information</h2>
+                </div>
+                <div class="card-body markdown-body">
+                    {{ function_info | safe }}
+                </div>
+            </div>
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2>Code Snippets</h2>
+                </div>
+                <div class="card-body markdown-body">
+                    <pre><code>{{ code_snippets | safe }}</code></pre>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.10/clipboard.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightBlock(block);
+                var button = document.createElement('button');
+                button.className = 'btn btn-sm btn-outline-secondary copy-button';
+                button.textContent = 'Copy';
+                block.parentNode.style.position = 'relative';
+                block.parentNode.appendChild(button);
+                var clipboard = new ClipboardJS(button, {
+                    target: function() {
+                        return block;
+                    }
+                });
+                clipboard.on('success', function(e) {
+                    button.textContent = 'Copied!';
+                    setTimeout(function() {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                    e.clearSelection();
+                });
+            });
+        });
+    </script>
+</body>
+</html>

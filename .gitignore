@@ -1,0 +1,24 @@
+# Исключить виртуальные окружения
+.venv/
+venv/
+
+# Исключить директории node_modules
+node_modules/
+
+# Исключить временные файлы
+*.log
+*.tmp
+*.bak
+*.swp
+*.idea/
+*.vscode/
+
+# Исключить директорию icompile
+icompile/
+
+# Исключить другие временные или кэшированные файлы
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+.env

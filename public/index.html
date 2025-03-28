@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iCompile</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="logo.svg" type="image/png">
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
+    <!-- Optional Theme -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/eclipse.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/monokai.min.css">
+
+    <!-- Google Fonts: Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- CodeMirror JavaScript --> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/edit/closetag.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/selection/active-line.min.js"></script>
+
+    
+</head>
+
+<body>
+    <div class="header">
+        <div class="title-container">
+            <img src="1.svg" alt="Title Logo" class="title-logo">
+            <input type="text" class="title-input" id="code-title" placeholder="Enter Title Here">
+        </div>
+        <div class="buttons-container">
+            <div id="coin-balance" class="coin-info" onclick="goToiCoinsPage()">
+                <i class="fa fa-coins"></i> <span id="balance">100</span> iCoins
+            </div>
+            <button class="run-button" onclick="runCode()"><i class="fa fa-play"></i>Run (5 <i class="fa fa-coins"></i>)</button>
+            <button class="correct-button" onclick="correctCode()"><i class="fa fa-check"></i>Correct (30 <i class="fa fa-coins"></i>)</button>
+            <button class="save-button" onclick="saveCode()"><i class="fa fa-save"></i>Save</button>
+        </div>
+        
+        <script>
+            function goToiCoinsPage() {
+                window.location.href = 'icoins.html';
+            }
+        </script>
+        
+    </div>
+
+    <div class="profile-info-container">
+        <div class="profile-info">
+            <span id="profile-name"></span>
+            <a href="profile.html" class="edit-profile-link" id="profile-email"></a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="editor-output-container">
+            <div class="editor-container">
+                <textarea id="code-editor"></textarea>
+            </div>
+            <div class="output-container" id="output-container"></div>
+        </div>
+    </div>
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loader"></div>
+    </div>
+    <div class="notification-banner" id="notificationBanner">
+        <p>Ввод данных невозможен напрямую. Пожалуйста, обозначьте данные в коде.</p>
+        <button class="close-banner" onclick="closeBanner()">✖</button>
+    </div>
+    
+    <!-- Login Prompt Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>Login Required</h2>
+            <p>You need to be logged in to use this feature. Please login or register to continue.</p>
+            <button onclick="redirectToLogin()">Login</button>
+        </div>
+    </div>
+
+    <!-- New Saved Functions Section -->
+    <div class="saved-functions-container">
+        <h2>Saved Functions</h2>
+        <div id="saved-functions-list" class="function-list">
+            <!-- Saved functions will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        var editor;
+        var balance;
+
+        async function fetchSavedFunctions() {
+            try {
+                const response = await fetch('/get-saved-functions');
+                const functions = await response.json();
+                const savedFunctionsList = document.getElementById('saved-functions-list');
+
+                savedFunctionsList.innerHTML = ''; // Clear existing content
+
+                functions.forEach((func, index) => {
+                    const funcBox = document.createElement('div');
+                    funcBox.className = 'function-box';
+
+                    const createdAt = new Date(func.createdAt).toLocaleDateString(); // Format the date to show only the date
+
+                    funcBox.innerHTML = `
+                        <div class="function-header">
+                            <div class="function-meta">
+                                <span class="function-number">#${index + 1}</span>
+                                <span class="function-title">${func.title}</span>
+                            </div>
+                            <span class="function-date">${createdAt}</span>
+                        </div>
+                        <textarea class="function-editor">${func.code}</textarea>
+                        <div class="buttons-container">
+                            <button class="delete-button" onclick="deleteFunction(${func.id})">
+                                <i class="fa fa-trash"></i> Delete
+                            </button>
+                            <button class="load-button" onclick="loadFunction(${func.id})">
+                                <i class="fa fa-upload"></i> Load in Editor
+                            </button>
+                        </div>
+                    `;
+
+                    savedFunctionsList.appendChild(funcBox);
+
+                    // Initialize CodeMirror for each saved function
+                    CodeMirror.fromTextArea(funcBox.querySelector('.function-editor'), {
+                        lineNumbers: true,
+                        mode: "javascript",
+                        theme: "eclipse",
+                        autoCloseBrackets: true,
+                        matchBrackets: true,
+                        autoCloseTags: true,
+                        styleActiveLine: true,
+                        readOnly: true // Make the editor read-only by default
+                    });
+                });
+            } catch (error) {
+                console.error('Failed to load saved functions:', error);
+            }
+        }
+
+        async function updateFunctionTitle(id, title) {
+            try {
+                await fetch('/update-function-title', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id, title })
+                });
+            } catch (error) {
+                console.error('Failed to update function title:', error);
+            }
+        }
+
+        async function deleteFunction(id) {
+            try {
+                await fetch(`/delete-function/${id}`, {
+                    method: 'DELETE'
+                });
+                fetchSavedFunctions(); // Refresh the saved functions list
+            } catch (error) {
+                console.error('Failed to delete function:', error);
+            }
+        }
+        function closeBanner() {
+            const banner = document.getElementById("notificationBanner");
+            banner.style.transition = "top 0.3s ease, opacity 0.3s ease";
+            banner.style.top = "-100px";
+            banner.style.opacity = "0";
+            setTimeout(() => banner.style.display = "none", 300);
+        }
+
+        async function loadFunction(id) {
+            try {
+                const response = await fetch(`/load-function/${id}`);
+                const func = await response.json();
+
+                if (func) {
+                    document.getElementById('code-title').value = func.title;
+                    editor.setValue(func.code);
+
+                    // Scroll to the top of the page
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } catch (error) {
+                console.error('Failed to load function:', error);
+            }
+        }
+
+        window.onload = async function () {
+            await fetchSavedFunctions(); // Load saved functions on page load
+
+            // Initialize CodeMirror
+            editor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+                lineNumbers: true,
+                mode: "javascript",
+                autoCloseBrackets: true,
+                matchBrackets: true,
+                autoCloseTags: true,
+                styleActiveLine: true,
+            });
+
+            // Fetch profile information
+            try {
+                const response = await fetch('/profile');
+                if (response.status === 401) { // If user is not authenticated
+                    balance = null;
+                } else {
+                    const data = await response.json();
+                    if (data) {
+                        document.getElementById('profile-name').textContent = data.name;
+                        document.getElementById('profile-email').textContent = data.email;
+                        balance = data.icoins; // Set balance for display
+                        document.getElementById('balance').textContent = balance;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load profile information');
+            }
+        };
+
+        function showLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+
+        function showLoginModal() {
+            document.getElementById('loginModal').style.display = 'block';
+        }
+
+        function redirectToLogin() {
+            window.location.href = 'login.html';
+        }
+
+        async function runCode() {
+    if (balance === null) {
+        showLoginModal();
+        return;
+    }
+
+    if (balance >= 5) {
+        showLoading();
+        // Удаляем ведущие пустые строки, чтобы нумерация начиналась с первой непустой строки
+        var code = editor.getValue().replace(/^\s*\n/, '');
+        var outputContainer = document.getElementById('output-container');
+        outputContainer.innerHTML = ''; // Clear previous output
+
+        try {
+            const response = await fetch('/run-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ code })
+            });
+
+            const data = await response.json();
+            console.log('Frontend received:', data);
+
+            if (data.success) {
+                balance = data.icoins;
+                document.getElementById('balance').textContent = balance;
+                const aiOutput = data.output || "No output provided by the AI";
+                outputContainer.innerHTML = `<pre><code>${aiOutput}</code></pre>`;
+            } else {
+                outputContainer.innerHTML = `<pre><code>${data.message}</code></pre>`;
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            outputContainer.innerHTML = "<pre><code>An error occurred while processing your request.</code></pre>";
+        } finally {
+            hideLoading();
+        }
+    } else {
+        alert("Not enough iCoins. Please recharge your balance.");
+    }
+}
+
+
+        async function correctCode() {
+            if (balance === null) {
+                showLoginModal();
+                return;
+            }
+
+            if (balance >= 30) {
+                showLoading();
+                var code = editor.getValue();
+                var outputContainer = document.getElementById('output-container');
+                outputContainer.innerHTML = ''; // Clear previous output
+
+                try {
+                    const response = await fetch('/correct-code', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ code })
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        balance = data.icoins; // Update balance with the new value
+                        document.getElementById('balance').textContent = balance; // Display updated balance
+                        
+                        const correctedCode = data.correctedCode || "No corrections provided by the AI";
+                        editor.setValue(correctedCode.trim());
+                    } else {
+                        alert(data.message);
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert("An error occurred while processing your request.");
+                } finally {
+                    hideLoading();
+                }
+            } else {
+                alert("Not enough iCoins. Please recharge your balance.");
+            }
+        }
+
+        async function saveCode() {
+            if (balance === null) {
+                showLoginModal();
+                return;
+            }
+
+            var title = document.getElementById('code-title').value.trim();
+            if (!title) {
+                alert("Please enter a title before saving your code.");
+                return;
+            }
+
+            var code = editor.getValue();
+
+            showLoading();
+
+            try {
+                await fetch('/save-function', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ title, code })
+                });
+                fetchSavedFunctions(); // Reload saved functions to reflect the new one
+            } catch (error) {
+                console.error('Failed to save function:', error);
+            } finally {
+                hideLoading();
+            }
+        }
+    </script>
+    
+</body>
+
+</html>
